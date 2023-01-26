@@ -6,17 +6,26 @@
   </head>
 
   <body>
-    <div id="button-area" style="display: flex">
+    <div id="button-area" style="display: flex;">
       <button id="start" style="display: block">start</button>
       <button id="pause" style="display: block">pause</button>
       <button id="resume" style="display: block">resume</button>
       <button id="stop" style="display: block">stop</button>
+      <button id="prev-jump" style="display: block">prev-jump</button>
+      <button id="next-jump" style="display: block">next-jump</button>
+      <button id="go" style="display: block">go</button>
+      <button id="back" style="display: block">back</button>
     </div>
 
     <div>
+      <p> 
+        남은 시간 : <span id="text-remain"></span>
+      </p>
+      <hr/>
       <textarea id="text-result"></textarea>
+      <!-- <div id="text-result"></div> -->
     </div>
   </body>
-  <script src="./constant.js"></script>
-  <script src="./index.js"></script>
+  <script type="module" src="./index1.js"></script>
 </html>
+
