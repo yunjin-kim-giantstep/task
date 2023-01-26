@@ -6,26 +6,26 @@ class Counter {
     this.stopButton = document.getElementById("stop");
     this.pauseButton = document.getElementById("pause");
     this.resumeButton = document.getElementById("resume");
-    this.goButton = document.getElementById("go");
-    this.backButton = document.getElementById("back");
     this.prevJumpButton = document.getElementById("prev-jump");
     this.nextJumpButton = document.getElementById("next-jump");
+    this.goButton = document.getElementById("go");
+    this.backButton = document.getElementById("back");
+    this.addButton = document.getElementById("add-delay");
     this.textResult = document.getElementById("text-result");
     this.remainText = document.getElementById("text-remain");
+    this.addDelayText = document.getElementById("text-add-delay");
     this.buttonArea = document.getElementById("button-area");
 
     this.datas = datas;
 
     this.number = 0;
-    this.timerId = null;
-    this.flag = "BEFORE"; // RUN, FREEZE
     this.startTime = 0;
     this.pauseTime = 0;
     this.currentDelay = this.datas[this.number]?.preDelay;
     this.timeouts = [];
     this.texts = [];
     this.isGo = true;
-    this.isJump = false;
+    this.flag = "BEFORE"; // RUN, FREEZE
     this.delayMode = "PRE"; // AFTER
 
     this.buttonArea.addEventListener("click", (e) => {
@@ -33,35 +33,38 @@ class Counter {
         case "start":
           if (this.flag !== "BEFORE") return;
           this.start();
-          this.flag = "RUN";
+          this.changeFlag("RUN");
           break;
         case "stop":
           this.stop();
-          this.flag = "BEFORE";
+          this.changeFlag("BEFORE");
           break;
         case "pause":
           if (this.flag !== "RUN") return;
           this.pause();
-          this.flag = "FREEZE";
+          this.changeFlag("FREEZE");
           break;
         case "resume":
           if (this.flag !== "FREEZE") return;
           this.resume();
-          this.flag = "RUN";
+          this.changeFlag("RUN");
           break;
         case "go":
           this.go();
-          this.flag = "RUN";
+          this.changeFlag("RUN");
           break;
         case "back":
           this.back();
-          this.flag = "RUN";
+          this.changeFlag("RUN");
           break;
         case "prev-jump":
           this.prevJump();
           break;
         case "next-jump":
           this.nextJump();
+          break;
+        case "add-delay":
+          this.addDelay();
           break;
       }
     });
@@ -70,90 +73,61 @@ class Counter {
   }
 
   init() {
-    this.number = 0;
+    this.changeNumber(0);
     this.textResult.innerHTML = "";
-    this.remainText.innerText = "";
-    this.isGo = true;
-    this.isJump = false;
+    this.hideRemainText();
+    this.changeIsGo(true);
 
     this.hidden(this.resumeButton);
     this.show(this.pauseButton);
   }
 
-  showRemainTime() {
-    this.remainText.innerText = `${this.delayMode} ${this.currentDelay}ms`;
-  }
-
-  /**
-   * @description param을 통해 text를 작성 유무 분기
-   * @param {boolean} isNumberAdd
-   */
   addCountText(isNumberAdd) {
     isNumberAdd
       ? this.texts.push(this.datas[this.number].text)
-      : this.texts.pop();
-    this.textResult.innerHTML = this.texts.map((v) => `<p>${v}</p>`).join("");
+      : this.texts.splice(this.number, this.texts.length);
+    this.textResult.innerHTML = this.texts
+      .map((v, i) => `<p>index:${i}, text:${v}</p>`)
+      .join("");
   }
 
-  /**
-   * @description 앞으로 카운트 진행 or 뒤로 카운트 진행
-   * @param {boolean} isGo
-   */
   preDelay(isGo) {
-    this.delayMode = "PRE";
+    this.changeDelayMode("PRE");
     this.currentDelay = this.datas[this.number]?.preDelay;
     this.startTime = Date.now();
 
-    if (this.datas[this.number]?.preDelay === undefined) {
-      if (this.countEnd()) return;
-      if (isGo === true) {
-        this.addCountText(isGo);
-      }
-      if (isGo === false) {
-        this.number -= 1;
-      }
-      this.afterDelay.call(this, isGo);
-      return;
+    function run() {
+      isGo ? this.addCountText(isGo) : this.changeNumber(-1);
+      return this.afterDelay.call(this, isGo);
     }
 
-    function run() {
-      if (isGo === true) {
-        this.addCountText(isGo);
-      }
-      if (isGo === false) {
-        this.number -= 1;
-      }
-      this.afterDelay.call(this, isGo);
+    if (this.datas[this.number]?.preDelay === undefined) {
+      if (this.countEnd()) return;
+      run.call(this);
+      return;
     }
 
     this.timeouts.push(setTimeout(run.bind(this), datas[this.number].preDelay));
   }
 
   afterDelay(isGo) {
-    this.delayMode = "AFTER";
+    this.changeDelayMode("AFTER");
     this.currentDelay = this.datas[this.number]?.afterDelay;
     this.startTime = Date.now();
 
-    if (this.datas[this.number]?.afterDelay === undefined) {
-      if (this.countEnd()) return;
-      if (isGo === true) {
-        this.number += 1;
-      }
-      if (isGo === false) {
-        this.addCountText(isGo);
-      }
+    function run() {
+      isGo ? this.changeNumber(1) : this.addCountText(isGo);
       this.preDelay.call(this, isGo);
+    }
+
+    if (this.datas[this.number + 1]?.preDelay === undefined) {
       return;
     }
 
-    function run() {
-      if (isGo === true) {
-        this.number += 1;
-      }
-      if (isGo === false) {
-        this.addCountText(isGo);
-      }
-      this.preDelay.call(this, isGo);
+    if (this.datas[this.number]?.afterDelay === undefined) {
+      if (this.countEnd()) return;
+      run.call(this);
+      return;
     }
 
     this.timeouts.push(
@@ -163,13 +137,12 @@ class Counter {
 
   remainCountUp(time, isGo) {
     function run() {
-      isGo ? (this.number += 1) : (this.number -= 1);
-      this.addCountText(isGo);
       if (this.delayMode === "PRE") {
-        this.preDelay(isGo);
-      }
-      if (this.delayMode === "AFTER") {
+        isGo ? this.addCountText(isGo) : this.changeNumber(-1);
         this.afterDelay(isGo);
+      } else if (this.delayMode === "AFTER") {
+        isGo ? this.changeNumber(1) : this.addCountText(isGo);
+        this.preDelay(isGo);
       }
     }
 
@@ -180,18 +153,17 @@ class Counter {
     this.timeouts.forEach((timeout) => {
       clearTimeout(timeout);
     });
-    // this.timeouts = [];
+    this.timeouts = [];
   }
 
   countEnd() {
-    if (this.datas.length === this.number) {
+    if (this.datas.length === this.number + 1) {
       this.end();
-      this.number -= 1;
       return true;
     }
     if (this.number < 0) {
       this.end();
-      this.number = 0;
+      this.changeNumber(0);
       return true;
     }
 
@@ -219,25 +191,14 @@ class Counter {
 
   resume() {
     this.startTime = Date.now();
-    if (this.isJump) {
-      if (this.delayMode === "PRE") {
-        this.preDelay(this.isGo);
-      }
-      if (this.delayMode === "AFTER") {
-        this.afterDelay(this.isGo);
-      }
-      this.isJump = false;
-    } else if (!this.isJump) {
-      this.remainCountUp(this.currentDelay, this.isGo);
-      this.isJump = false;
-    }
+    this.remainCountUp(this.currentDelay, this.isGo);
 
     this.show(this.pauseButton);
     this.hidden(this.resumeButton);
   }
 
   go() {
-    this.isGo = true;
+    this.changeIsGo(true);
     this.countStop();
     this.remainCountUp(this.currentDelay, true);
 
@@ -246,7 +207,7 @@ class Counter {
   }
 
   back() {
-    this.isGo = false;
+    this.changeIsGo(false);
     this.countStop();
     this.remainCountUp(this.currentDelay, false);
 
@@ -256,33 +217,44 @@ class Counter {
 
   prevJump() {
     this.countStop();
-    this.number -= 1;
+    this.changeNumber(-1);
+    this.changeDelayMode("PRE");
     this.addCountText(false);
-    console.log("prevJump", this.number);
-    this.isJump = true;
+    this.hideRemainText();
     if (this.flag !== "FREEZE") {
       this.preDelay(this.isGo);
     }
-
-    this.remainText.innerText = "";
   }
 
   nextJump() {
     this.countStop();
-    this.number += 1;
-    this.addCountText(true);
-    console.log("nextJump", this.number);
-    this.isJump = true;
+    this.delayMode === "PRE" ? this.addCountText(true) : "";
+    this.changeDelayMode("PRE");
+    this.changeNumber(1);
+    this.hideRemainText();
     if (this.flag !== "FREEZE") {
       this.preDelay(this.isGo);
     }
+  }
 
-    this.remainText.innerText = "";
+  addDelay() {
+    if (this.datas.length === this.number + 1) {
+      const random = this.datas[Math.floor(Math.random() * this.datas.length)];
+      datas.push(random);
+      this.changeFlag("RUN");
+      this.changeNumber(1);
+      this.start();
+      return (this.addDelayText.innerText = JSON.stringify(random));
+    }
+    const random = this.datas[Math.floor(Math.random() * this.datas.length)];
+    datas.push(random);
+
+    this.addDelayText.innerText = JSON.stringify(random);
   }
 
   end() {
     this.countStop();
-    this.flag = "FREEZE";
+    this.changeFlag("BEFORE");
   }
 
   show(el) {
@@ -291,6 +263,32 @@ class Counter {
 
   hidden(el) {
     el.style.display = "none";
+  }
+
+  hideRemainText() {
+    this.remainText.innerText = "";
+  }
+
+  showRemainTime() {
+    this.remainText.innerText = `${this.delayMode} ${this.currentDelay}ms`;
+  }
+
+  changeNumber(number) {
+    if (number === 0) return (this.number = 0);
+    this.number += number;
+    if (this.number < 0) this.number = 0;
+  }
+
+  changeDelayMode(mode) {
+    this.delayMode = mode;
+  }
+
+  changeFlag(flag) {
+    this.flag = flag;
+  }
+
+  changeIsGo(boolean) {
+    this.isGo = boolean;
   }
 }
 
