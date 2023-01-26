@@ -120,7 +120,12 @@ class Counter {
       this.preDelay.call(this, isGo);
     }
 
-    if (this.datas[this.number + 1]?.preDelay === undefined) {
+    if (
+      this.datas[this.number + 1]?.preDelay === undefined &&
+      this.datas[this.number + 1]?.afterDelay === undefined &&
+      this.datas[this.number + 1]?.text === undefined
+    ) {
+      this.end();
       return;
     }
 
@@ -238,7 +243,7 @@ class Counter {
   }
 
   addDelay() {
-    if (this.datas.length === this.number + 1) {
+    if (this.datas.length === this.number + 1 && this.flag === "FREEZE") {
       const random = this.datas[Math.floor(Math.random() * this.datas.length)];
       datas.push(random);
       this.changeFlag("RUN");
@@ -254,7 +259,7 @@ class Counter {
 
   end() {
     this.countStop();
-    this.changeFlag("BEFORE");
+    this.changeFlag("FREEZE");
   }
 
   show(el) {
